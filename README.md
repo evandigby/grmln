@@ -12,14 +12,14 @@ The first step is to create a connection:
 
 ```go
 c, err := grmln.Dial(
-		context.Background(),
-		"ws://localhost:8182/gremlin",
-		grmln.DefaultMimeType,
-	)
-	if err != nil {
-		log.Fatalf("Error connecting: %v", err)
-	}
-	defer c.Close()
+    context.Background(),
+    "ws://localhost:8182/gremlin",
+    grmln.DefaultMimeType,
+)
+if err != nil {
+    log.Fatalf("Error connecting: %v", err)
+}
+defer c.Close()
 ```
 
 #### Clustered
