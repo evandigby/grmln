@@ -88,20 +88,15 @@ func (c *Conn) processRequest(r request, onResponse OnResponse) error {
 }
 
 func (c *Conn) sendRequest(r request) error {
-	const appType = "application/vnd.gremlin-v2.0+json"
-	msg := []byte{
-		byte(len(appType)),
-	}
+	buf := getSendBuf()
+	defer buf.Close()
 
-	rdata, err := json.Marshal(r)
+	err := json.NewEncoder(buf).Encode(r)
 	if err != nil {
 		return err
 	}
 
-	msg = append(msg, []byte(appType)...)
-	msg = append(msg, rdata...)
-
-	return c.ws.WriteMessage(websocket.BinaryMessage, msg)
+	return c.ws.WriteMessage(websocket.BinaryMessage, buf.Bytes())
 }
 
 func (c *Conn) readResponse(onResponse OnResponse) error {
