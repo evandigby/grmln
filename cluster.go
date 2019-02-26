@@ -123,8 +123,12 @@ func (c *Cluster) getConn(ctx context.Context) (*Conn, error) {
 func (c *Cluster) putConn(conn *Conn, err error) {
 	if err != nil {
 		go func() {
-			c.conns <- c.connect(conn.addr, conn.mimeType)
+			conn := c.connect(conn.addr, conn.mimeType)
+			if conn != nil {
+				c.conns <- conn
+			}
 		}()
+		return
 	}
 
 	c.conns <- conn
