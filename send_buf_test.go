@@ -11,7 +11,9 @@ import (
 func TestSendBufReset(t *testing.T) {
 	const numTests = 25
 
-	b := getSendBuf()
+	p := newSendBufferPool(DefaultMimeType)
+
+	b := p.get()
 
 	for i := 0; i < numTests; i++ {
 		randLen := rand.Int63n(127) + 1
@@ -19,7 +21,7 @@ func TestSendBufReset(t *testing.T) {
 		rand.Read(data)
 
 		t.Run(fmt.Sprintf("pass %d", i), func(t *testing.T) {
-			expectedResult := append(appTypeDataCopy(), data...)
+			expectedResult := append(p.mimeTypeDataCopy(), data...)
 			_, err := b.Write(data)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -30,12 +32,14 @@ func TestSendBufReset(t *testing.T) {
 			}
 		})
 
-		b.Reset()
+		p.Reset(b)
 	}
 }
 
-func TestAppTypeDataCopy(t *testing.T) {
-	expected, actual := appTypeData, appTypeDataCopy()
+func TestMimeTypeDataCopy(t *testing.T) {
+	p := newSendBufferPool(DefaultMimeType)
+
+	expected, actual := p.mimeTypeData, p.mimeTypeDataCopy()
 
 	if bytes.Compare(expected, actual) != 0 {
 		t.Fatalf("expected %v but got %v", expected, actual)
@@ -46,11 +50,12 @@ func BenchmarkBufPool(b *testing.B) {
 	data := make([]byte, 1024)
 	rand.Read(data)
 
+	p := newSendBufferPool(DefaultMimeType)
 	b.Run("pooled", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			func() {
-				buf := getSendBuf()
-				defer buf.Close()
+				buf := p.get()
+				defer p.put(buf)
 				buf.Write(data)
 			}()
 		}
@@ -60,16 +65,16 @@ func BenchmarkBufPool(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_ = append(
 				[]byte{
-					byte(appTypeLen),
+					byte(p.mimeTypeLen),
 				},
-				append([]byte(appType), data...)...,
+				append([]byte(p.mimeTypeData), data...)...,
 			)
 		}
 	})
 
 	b.Run("unpooled using copy", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_ = append(appTypeDataCopy(), data...)
+			_ = append(p.mimeTypeDataCopy(), data...)
 		}
 	})
 }

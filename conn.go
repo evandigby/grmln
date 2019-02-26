@@ -1,11 +1,11 @@
 package grmln
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
-	"time"
+	"sync"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -14,94 +14,70 @@ type OnResponse func(resp *Response)
 
 // Conn is a gremlin server connection
 type Conn struct {
-	ws *websocket.Conn
+	mimeType string
+	addr     string
+	ws       *websocket.Conn
 
-	// DefaultScriptEvaluationTimeout is the default script evaluation timeout. Defaults to 3000ms
-	DefaultScriptEvaluationTimeout time.Duration
+	requestMutex sync.Mutex
 
-	// DefaultEvalLanguage is the default eval language for use. Defaults to "gremlin-groovy"
-	DefaultEvalLanguage string
-
-	// DefaultBatchSize is the default size of batched responses. 0 uses server default
-	DefaultBatchSize int
+	sendBufferPool *sendBufferPool
 }
 
 // Dial dials addresses
-func Dial(addr string) (*Conn, error) {
+func Dial(ctx context.Context, addr string, mimeType string) (*Conn, error) {
 	dialer := websocket.Dialer{}
 
-	ws, _, err := dialer.Dial(addr, http.Header{})
+	ws, _, err := dialer.DialContext(ctx, addr, http.Header{})
 	if err != nil {
 		return nil, err
 	}
 
 	return &Conn{
-		ws:                             ws,
-		DefaultScriptEvaluationTimeout: 3000 * time.Millisecond,
-		DefaultEvalLanguage:            LanguageGremlinGroovy,
-		DefaultBatchSize:               0, // 0 uses server default
+		mimeType:       mimeType,
+		addr:           addr,
+		ws:             ws,
+		sendBufferPool: newSendBufferPool(mimeType),
 	}, nil
 }
 
-const (
-	opEval = "eval"
-)
+// ProcessRequest can process a raw gremlin request
+func (c *Conn) ProcessRequest(ctx context.Context, r Request, onResponse OnResponse) error {
+	c.requestMutex.Lock()
+	defer c.requestMutex.Unlock()
 
-// Eval languages
-const (
-	LanguageGremlinGroovy = "gremlin-groovy"
-)
-
-// Eval evaluates a gremlin statement
-func (c *Conn) Eval(args EvalArgs, onResponse OnResponse) error {
-	r := request{
-		RequestID: uuid.New().String(),
-		Operation: opEval,
-		Arguments: args,
-	}
-
-	return c.processRequest(r, onResponse)
-}
-
-// EvalDefault is a helper that calls Eval using the default argument values
-func (c *Conn) EvalDefault(gremlin string, onResponse OnResponse) error {
-	return c.Eval(
-		EvalArgs{
-			OpArgs: OpArgs{
-				BatchSize: c.DefaultBatchSize,
-			},
-			Gremlin:                   gremlin,
-			Language:                  c.DefaultEvalLanguage,
-			ScriptEvaluationTimeoutMS: int64(c.DefaultScriptEvaluationTimeout / time.Millisecond),
-		},
-		onResponse,
-	)
-}
-
-func (c *Conn) processRequest(r request, onResponse OnResponse) error {
-	err := c.sendRequest(r)
+	err := c.sendRequest(ctx, r)
 	if err != nil {
 		return err
 	}
 
-	return c.readResponse(onResponse)
+	return c.readResponse(ctx, onResponse)
 }
 
-func (c *Conn) sendRequest(r request) error {
-	buf := getSendBuf()
-	defer buf.Close()
+func (c *Conn) sendRequest(ctx context.Context, r Request) error {
+	buf := c.sendBufferPool.get()
+	defer c.sendBufferPool.put(buf)
 
 	err := json.NewEncoder(buf).Encode(r)
 	if err != nil {
 		return err
 	}
 
+	dl, ok := ctx.Deadline()
+	if ok {
+		c.ws.SetWriteDeadline(dl)
+	}
+
 	return c.ws.WriteMessage(websocket.BinaryMessage, buf.Bytes())
 }
 
-func (c *Conn) readResponse(onResponse OnResponse) error {
+func (c *Conn) readResponse(ctx context.Context, onResponse OnResponse) error {
+	dl, ok := ctx.Deadline()
+	if ok {
+		c.ws.SetReadDeadline(dl)
+	}
 	for {
 		var resp Response
+
 		err := c.ws.ReadJSON(&resp)
 		if err != nil {
 			return err
@@ -121,5 +97,7 @@ func (c *Conn) readResponse(onResponse OnResponse) error {
 
 // Close closes the connection (including the underlying websocket)
 func (c *Conn) Close() error {
+	c.requestMutex.Lock()
+	defer c.requestMutex.Unlock()
 	return c.ws.Close()
 }

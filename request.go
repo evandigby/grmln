@@ -1,6 +1,7 @@
 package grmln
 
-type request struct {
+// Request represents a raw gremlin request
+type Request struct {
 	RequestID string      `json:"requestId"`
 	Operation string      `json:"op"`
 	Processor string      `json:"processor"`
@@ -21,3 +22,4 @@ type EvalArgs struct {
 	Aliases                   map[string]string      `json:"aliases,omitempty"`
 	ScriptEvaluationTimeoutMS int64                  `json:"scriptEvaluationTimeout"`
 }
+

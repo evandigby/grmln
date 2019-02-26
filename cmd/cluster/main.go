@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,12 +10,19 @@ import (
 )
 
 func main() {
-	c, err := grmln.Dial("ws://localhost:8182/gremlin")
-	if err != nil {
-		log.Fatal(err)
-	}
+	c := grmln.NewCluster(
+		grmln.ClusterConfig{
+			OnConnectError: func(addr string, err error, attempts int) {
+				log.Printf("Error connecting to %s (total attempts %d): %v", addr, attempts, err)
+			},
+		},
+		"ws://localhost:8182/gremlin",
+	)
+	defer c.Close()
 
-	err = c.EvalDefault(`g.V()`, func(resp *grmln.Response) {
+	op := grmln.NewOperator(c)
+
+	err := op.EvalDefault(context.Background(), `g.V()`, func(resp *grmln.Response) {
 		data, err := json.MarshalIndent(resp.Result.Data, "", "   ")
 		if err != nil {
 			log.Fatalf("Error marshalling response: %v", err)

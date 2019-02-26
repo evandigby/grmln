@@ -76,23 +76,8 @@ const (
 
 // IsInvalid returns whether or not the status code is invalid
 func (c StatusCode) IsInvalid() bool {
-	switch c {
-	case StatusSuccess,
-		StatusNoContent,
-		StatusPartialContent,
-		StatusUnauthorized,
-		StatusAuthenticate,
-		StatusMalformedRequest,
-		StatusInvalidRequestArguments,
-		StatusServerError,
-		StatusScriptEvaluationError,
-		StatusServerTimeout,
-		StatusServerSerializationError:
-
-		return false
-	default:
-		return true
-	}
+	_, ok := statusCodeStrings[c]
+	return !ok
 }
 
 var statusCodeStrings = map[StatusCode]string{
@@ -111,10 +96,11 @@ var statusCodeStrings = map[StatusCode]string{
 
 // StatusString returns the stringified version of the status code
 func StatusString(code StatusCode) string {
-	if code.IsInvalid() {
+	str, ok := statusCodeStrings[code]
+	if !ok {
 		return fmt.Sprintf("Invalid Response Code: %d", code)
 	}
 
-	return statusCodeStrings[code]
+	return str
 }
 
