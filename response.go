@@ -39,19 +39,9 @@ func (r Response) Err() error {
 
 		return nil
 
-	case StatusUnauthorized,
-		StatusAuthenticate,
-		StatusMalformedRequest,
-		StatusInvalidRequestArguments,
-		StatusServerError,
-		StatusScriptEvaluationError,
-		StatusServerTimeout,
-		StatusServerSerializationError:
-
-		return responseError{response: r}
-
+	// All other codes are error codes (including invalid ones)
 	default:
-		panic(fmt.Sprintf("Invalid response code: %d", r.Status.Code))
+		return responseError{response: r}
 	}
 }
 
@@ -84,6 +74,27 @@ const (
 	StatusServerSerializationError StatusCode = 599
 )
 
+// IsInvalid returns whether or not the status code is invalid
+func (c StatusCode) IsInvalid() bool {
+	switch c {
+	case StatusSuccess,
+		StatusNoContent,
+		StatusPartialContent,
+		StatusUnauthorized,
+		StatusAuthenticate,
+		StatusMalformedRequest,
+		StatusInvalidRequestArguments,
+		StatusServerError,
+		StatusScriptEvaluationError,
+		StatusServerTimeout,
+		StatusServerSerializationError:
+
+		return false
+	default:
+		return true
+	}
+}
+
 var statusCodeStrings = map[StatusCode]string{
 	StatusSuccess:                  "Success",
 	StatusNoContent:                "No Content",
@@ -100,6 +111,10 @@ var statusCodeStrings = map[StatusCode]string{
 
 // StatusString returns the stringified version of the status code
 func StatusString(code StatusCode) string {
+	if code.IsInvalid() {
+		return fmt.Sprintf("Invalid Response Code: %d", code)
+	}
+
 	return statusCodeStrings[code]
 }
 

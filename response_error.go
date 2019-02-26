@@ -38,6 +38,9 @@ func (e responseError) IsServerTimeout() bool {
 func (e responseError) IsServerSerializationError() bool {
 	return e.response.Status.Code == StatusServerSerializationError
 }
+func (e responseError) IsInvalidResponseCode() bool {
+	return e.response.Status.Code.IsInvalid()
+}
 
 type unauthorized interface {
 	IsUnauthorized() bool
@@ -62,6 +65,9 @@ type serverTimeout interface {
 }
 type serverSerializationError interface {
 	IsServerSerializationError() bool
+}
+type invalidResponseCode interface {
+	IsInvalidResponseCode() bool
 }
 
 // IsUnauthorized returns whether or not the error is a Unauthorized error
@@ -111,3 +117,10 @@ func IsServerSerializationError(err error) bool {
 	e, ok := err.(serverSerializationError)
 	return ok && e.IsServerSerializationError()
 }
+
+// IsInvalidResponseCode returns whether or not the response code is completely invalid (not in the supported spec)
+func IsInvalidResponseCode(err error) bool {
+	e, ok := err.(invalidResponseCode)
+	return ok && e.IsInvalidResponseCode()
+}
+
