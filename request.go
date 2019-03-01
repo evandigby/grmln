@@ -1,5 +1,17 @@
 package grmln
 
+import "github.com/google/uuid"
+
+// NewRequest creates a new request
+func NewRequest(processor, operation string, arguments interface{}) Request {
+	return Request{
+		RequestID: uuid.New().String(),
+		Processor: processor,
+		Operation: operation,
+		Arguments: arguments,
+	}
+}
+
 // Request represents a raw gremlin request
 type Request struct {
 	RequestID string      `json:"requestId"`
@@ -23,3 +35,41 @@ type EvalArgs struct {
 	ScriptEvaluationTimeoutMS int64                  `json:"scriptEvaluationTimeout"`
 }
 
+// AuthenticationArgs args required for authentication ops
+type AuthenticationArgs struct {
+	SASL          string `json:"sasl"`
+	SASLMechanism string `json:"saslMechanism,omitempty"`
+}
+
+// SessionArgs are args for a session
+type SessionArgs struct {
+	Session string `json:"session"`
+}
+
+// TransactionEvalArgs are args specific to evals within a session with transaction management
+type TransactionEvalArgs struct {
+	EvalArgs
+	ManageTransaction bool `json:"manageTransaction"`
+}
+
+// SessionEvalArgs are args specific to evals within a session
+type SessionEvalArgs struct {
+	SessionArgs
+	TransactionEvalArgs
+}
+
+// SessionAuthenticationArgs are args specific to authentication within a session
+type SessionAuthenticationArgs struct {
+	SessionArgs
+	AuthenticationArgs
+}
+
+type CloseArgs struct {
+	Force bool `json:"force,omitempty"`
+}
+
+// SessionCloseArgs args for session close
+type SessionCloseArgs struct {
+	SessionArgs
+	CloseArgs
+}

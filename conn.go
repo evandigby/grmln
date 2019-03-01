@@ -12,6 +12,8 @@ import (
 // OnResponse callback when a partial or complete response is received
 type OnResponse func(resp *Response)
 
+var noopOnResponse = func(resp *Response) {}
+
 // Conn is a gremlin server connection
 type Conn struct {
 	mimeType string
