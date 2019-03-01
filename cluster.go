@@ -11,7 +11,7 @@ import (
 const (
 	DefaultBackoffBase = time.Millisecond * 100
 	DefaultBackoffMax  = time.Second * 10
-	DefaultMimeType    = "application/json"
+	DefaultMimeType    = "application/vnd.gremlin-v1.0+json"
 )
 
 type (
