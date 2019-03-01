@@ -36,7 +36,7 @@ c := grmln.NewCluster(
 defer c.Close()
 ```
 
-### 2. Create and Utilize and Operator
+### 2. Create and Utilize an Operator
 
 The second step is to wrap that connection with an operator that helps you with queries. 
 
