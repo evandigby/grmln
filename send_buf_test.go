@@ -32,7 +32,7 @@ func TestSendBufReset(t *testing.T) {
 			}
 		})
 
-		p.Reset(b)
+		p.reset(b)
 	}
 }
 

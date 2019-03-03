@@ -5,6 +5,9 @@ import (
 	"sync"
 )
 
+var sendBufferPools = map[string]*sendBufferPool{}
+var sendBufferPoolsMutex sync.RWMutex
+
 type sendBufferPool struct {
 	mimeType     string
 	mimeTypeLen  int
@@ -14,6 +17,22 @@ type sendBufferPool struct {
 }
 
 func newSendBufferPool(mimeType string) *sendBufferPool {
+	// These should be shared by mime type across all users in the same process
+	sendBufferPoolsMutex.RLock()
+	if p, ok := sendBufferPools[mimeType]; ok {
+		sendBufferPoolsMutex.RUnlock()
+		return p
+	}
+	sendBufferPoolsMutex.RUnlock()
+
+	sendBufferPoolsMutex.Lock()
+	defer sendBufferPoolsMutex.Unlock()
+
+	// Double check in case it was created between RUnlock and Lock
+	if p, ok := sendBufferPools[mimeType]; ok {
+		return p
+	}
+
 	p := sendBufferPool{
 		mimeType:    mimeType,
 		mimeTypeLen: len(mimeType),
@@ -34,6 +53,7 @@ func newSendBufferPool(mimeType string) *sendBufferPool {
 		},
 	}
 
+	sendBufferPools[mimeType] = &p
 	return &p
 }
 
@@ -45,11 +65,11 @@ func (p *sendBufferPool) mimeTypeDataCopy() []byte {
 
 func (p *sendBufferPool) get() *bytes.Buffer {
 	buf := p.pool.Get().(*bytes.Buffer)
-	p.Reset(buf)
+	p.reset(buf)
 	return buf
 }
 
-func (p sendBufferPool) Reset(buf *bytes.Buffer) {
+func (p sendBufferPool) reset(buf *bytes.Buffer) {
 	buf.Truncate(p.truncateLen)
 }
 
