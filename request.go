@@ -1,11 +1,19 @@
 package grmln
 
-import "github.com/google/uuid"
+import (
+	"fmt"
+
+	"github.com/google/uuid"
+)
 
 // NewRequest creates a new request
-func NewRequest(processor, operation string, arguments interface{}) Request {
+func NewRequest(id, processor, operation string, arguments interface{}) Request {
+	if id == "" {
+		id = uuid.New().String()
+	}
+	fmt.Println("id", id)
 	return Request{
-		RequestID: uuid.New().String(),
+		RequestID: id,
 		Processor: processor,
 		Operation: operation,
 		Arguments: arguments,

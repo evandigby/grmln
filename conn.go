@@ -2,6 +2,7 @@ package grmln
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"sync"
@@ -18,6 +19,9 @@ var noopOnResponse = func(resp *Response) {}
 type Conn struct {
 	mimeType string
 	addr     string
+	userName string
+	password string
+	authArgs AuthenticationArgs
 	ws       *websocket.Conn
 
 	requestMutex sync.Mutex
@@ -25,8 +29,21 @@ type Conn struct {
 	sendBufferPool *sendBufferPool
 }
 
+// SASL calculates sasl authentication args
+func SASL(userName, password string) AuthenticationArgs {
+	sasl := []byte{0}
+	sasl = append(sasl, []byte(userName)...)
+	sasl = append(sasl, 0)
+	sasl = append(sasl, []byte(password)...)
+
+	return AuthenticationArgs{
+		SASL:          base64.StdEncoding.EncodeToString(sasl),
+		SASLMechanism: "PLAIN",
+	}
+}
+
 // Dial dials addresses
-func Dial(ctx context.Context, addr string, mimeType string) (*Conn, error) {
+func Dial(ctx context.Context, addr, mimeType, userName, password string) (*Conn, error) {
 	dialer := websocket.Dialer{}
 
 	ws, _, err := dialer.DialContext(ctx, addr, http.Header{})
@@ -37,6 +54,9 @@ func Dial(ctx context.Context, addr string, mimeType string) (*Conn, error) {
 	return &Conn{
 		mimeType:       mimeType,
 		addr:           addr,
+		userName:       userName,
+		password:       password,
+		authArgs:       SASL(userName, password),
 		ws:             ws,
 		sendBufferPool: newSendBufferPool(mimeType),
 	}, nil
@@ -86,7 +106,11 @@ func (c *Conn) readResponse(ctx context.Context, onResponse OnResponse) error {
 		}
 
 		if err := resp.Err(); err != nil {
-			return err
+			if !IsAuthenticate(err) {
+				return err
+			}
+
+			return c.ProcessRequest(ctx, NewRequest(resp.RequestID, processorDefault, opAuthentication, c.authArgs), onResponse)
 		}
 
 		onResponse(&resp)

@@ -69,7 +69,7 @@ func (p *sendBufferPool) get() *bytes.Buffer {
 	return buf
 }
 
-func (p sendBufferPool) reset(buf *bytes.Buffer) {
+func (p *sendBufferPool) reset(buf *bytes.Buffer) {
 	buf.Truncate(p.truncateLen)
 }
 

@@ -55,6 +55,12 @@ type ClusterConfig struct {
 
 	// OnConnectError is called when there is an error connecting
 	OnConnectError OnConnectError
+
+	// UserName is the connection username
+	UserName string
+
+	// Password is the connection password
+	Password string
 }
 
 // NewCluster creates a new cluster
@@ -71,7 +77,7 @@ func NewCluster(config ClusterConfig, addrs ...string) *Cluster {
 
 	for _, addr := range addrs {
 		for i := 0; i < config.ConnectionsPerAddress; i++ {
-			go cluster.putConn(cluster.connect(addr, config.MimeType), nil)
+			go cluster.putConn(cluster.connect(addr, config.MimeType, config.UserName, config.Password), nil)
 		}
 	}
 
@@ -123,7 +129,7 @@ func (c *Cluster) getConn(ctx context.Context) (*Conn, error) {
 func (c *Cluster) putConn(conn *Conn, err error) {
 	if err != nil {
 		go func() {
-			conn := c.connect(conn.addr, conn.mimeType)
+			conn := c.connect(conn.addr, conn.mimeType, conn.userName, conn.password)
 			if conn != nil {
 				c.conns <- conn
 			}
@@ -144,11 +150,11 @@ func (c *Cluster) randomJitter(sleep time.Duration) time.Duration {
 	)
 }
 
-func (c *Cluster) connect(addr, mimeType string) *Conn {
+func (c *Cluster) connect(addr, mimeType, userName, password string) *Conn {
 	sleep := c.backoffBase
 	attempts := 1
 	for {
-		conn, err := Dial(context.Background(), addr, mimeType)
+		conn, err := Dial(context.Background(), addr, mimeType, userName, password)
 		if err == nil {
 			// connected!
 			return conn

@@ -14,6 +14,8 @@ func main() {
 		context.Background(),
 		"ws://localhost:8182/gremlin",
 		grmln.DefaultMimeType,
+		"",
+		"",
 	)
 	if err != nil {
 		log.Fatalf("Error connecting: %v", err)

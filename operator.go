@@ -81,17 +81,12 @@ func (o *Operator) NewSession() *SessionOperator {
 
 // Eval evaluates a gremlin statement
 func (o *Operator) Eval(ctx context.Context, args EvalArgs, onResponse OnResponse) error {
-	return o.p.ProcessRequest(ctx, NewRequest(processorDefault, opEval, args), onResponse)
+	return o.p.ProcessRequest(ctx, NewRequest("", processorDefault, opEval, args), onResponse)
 }
 
 // EvalDefault is a helper that calls Eval using the default argument values
 func (o *Operator) EvalDefault(ctx context.Context, gremlin string, onResponse OnResponse) error {
 	return o.Eval(ctx, o.evalArgs(gremlin), onResponse)
-}
-
-// Authentication evaluates an authentication statement
-func (o *Operator) Authentication(ctx context.Context, args AuthenticationArgs, onResponse OnResponse) error {
-	return o.p.ProcessRequest(ctx, NewRequest(processorDefault, opAuthentication, args), onResponse)
 }
 
 // SessionOperator is a helper to build gremlin operations
@@ -111,7 +106,7 @@ func (o *SessionOperator) sessionArgs() SessionArgs {
 
 // Eval evaluates a gremlin statement
 func (o *SessionOperator) Eval(ctx context.Context, args TransactionEvalArgs, onResponse OnResponse) error {
-	return o.p.ProcessRequest(ctx, NewRequest(processorSession, opEval, SessionEvalArgs{
+	return o.p.ProcessRequest(ctx, NewRequest("", processorSession, opEval, SessionEvalArgs{
 		SessionArgs:         o.sessionArgs(),
 		TransactionEvalArgs: args,
 	}), onResponse)
@@ -128,18 +123,9 @@ func (o *SessionOperator) EvalDefault(ctx context.Context, gremlin string, onRes
 	)
 }
 
-// Authentication evaluates an authentication statement
-func (o *SessionOperator) Authentication(ctx context.Context, args AuthenticationArgs, onResponse OnResponse) error {
-	return o.p.ProcessRequest(ctx, NewRequest(processorSession, opAuthentication,
-		SessionAuthenticationArgs{
-			SessionArgs:        o.sessionArgs(),
-			AuthenticationArgs: args,
-		}), onResponse)
-}
-
 // Close closes the session
 func (o *SessionOperator) Close(ctx context.Context, args CloseArgs) error {
-	return o.p.ProcessRequest(ctx, NewRequest(processorSession, opAuthentication,
+	return o.p.ProcessRequest(ctx, NewRequest("", processorSession, opAuthentication,
 		SessionCloseArgs{
 			SessionArgs: o.sessionArgs(),
 			CloseArgs:   args,
@@ -148,9 +134,8 @@ func (o *SessionOperator) Close(ctx context.Context, args CloseArgs) error {
 
 // CloseDefault closes the session with default optionss
 func (o *SessionOperator) CloseDefault(ctx context.Context) error {
-	return o.p.ProcessRequest(ctx, NewRequest(processorSession, opAuthentication,
+	return o.p.ProcessRequest(ctx, NewRequest("", processorSession, opAuthentication,
 		SessionCloseArgs{
 			SessionArgs: o.sessionArgs(),
 		}), noopOnResponse)
 }
-
