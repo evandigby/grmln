@@ -1,8 +1,6 @@
 package grmln
 
 import (
-	"fmt"
-
 	"github.com/google/uuid"
 )
 
@@ -11,7 +9,6 @@ func NewRequest(id, processor, operation string, arguments interface{}) Request 
 	if id == "" {
 		id = uuid.New().String()
 	}
-	fmt.Println("id", id)
 	return Request{
 		RequestID: id,
 		Processor: processor,
