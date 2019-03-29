@@ -63,7 +63,7 @@ func Dial(ctx context.Context, addr, mimeType, userName, password string) (*Conn
 }
 
 // ProcessRequest can process a raw gremlin request
-func (c *Conn) ProcessRequest(ctx context.Context, r Request, onResponse OnResponse) error {
+func (c *Conn) ProcessRequest(ctx context.Context, r Request, onResponse ...OnResponse) error {
 	c.requestMutex.Lock()
 	defer c.requestMutex.Unlock()
 
@@ -72,7 +72,7 @@ func (c *Conn) ProcessRequest(ctx context.Context, r Request, onResponse OnRespo
 		return err
 	}
 
-	return c.readResponse(ctx, onResponse)
+	return c.readResponse(ctx, onResponse...)
 }
 
 func (c *Conn) sendRequest(ctx context.Context, r Request) error {
@@ -92,7 +92,7 @@ func (c *Conn) sendRequest(ctx context.Context, r Request) error {
 	return c.ws.WriteMessage(websocket.BinaryMessage, buf.Bytes())
 }
 
-func (c *Conn) readResponse(ctx context.Context, onResponse OnResponse) error {
+func (c *Conn) readResponse(ctx context.Context, onResponse ...OnResponse) error {
 	dl, ok := ctx.Deadline()
 	if ok {
 		c.ws.SetReadDeadline(dl)
@@ -110,10 +110,12 @@ func (c *Conn) readResponse(ctx context.Context, onResponse OnResponse) error {
 				return err
 			}
 
-			return c.ProcessRequest(ctx, NewRequest(resp.RequestID, processorDefault, opAuthentication, c.authArgs), onResponse)
+			return c.ProcessRequest(ctx, NewRequest(resp.RequestID, processorDefault, opAuthentication, c.authArgs), onResponse...)
 		}
 
-		onResponse(&resp)
+		for _, or := range onResponse {
+			or(&resp)
+		}
 
 		if !resp.IsPartial() {
 			return nil

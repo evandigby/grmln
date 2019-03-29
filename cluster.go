@@ -173,7 +173,7 @@ func (c *Cluster) connect(addr, mimeType, userName, password string) *Conn {
 }
 
 // ProcessRequest can process a raw gremlin request
-func (c *Cluster) ProcessRequest(ctx context.Context, r Request, onResponse OnResponse) error {
+func (c *Cluster) ProcessRequest(ctx context.Context, r Request, onResponse ...OnResponse) error {
 	conn, err := c.getConn(ctx)
 	if err != nil {
 		return err
@@ -185,7 +185,7 @@ func (c *Cluster) ProcessRequest(ctx context.Context, r Request, onResponse OnRe
 		return err
 	}
 
-	err = conn.readResponse(ctx, onResponse)
+	err = conn.readResponse(ctx, onResponse...)
 	if err != nil {
 		c.putConn(conn, err)
 		return err

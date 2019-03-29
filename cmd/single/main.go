@@ -26,7 +26,7 @@ func main() {
 	sop := op.NewSession()
 	defer sop.CloseDefault(context.Background())
 
-	err = sop.EvalDefault(context.Background(), `g.V()`, func(resp *grmln.Response) {
+	err = sop.EvalDefault(context.Background(), `g.V()`, nil, func(resp *grmln.Response) {
 		data, err := json.MarshalIndent(resp.Result.Data, "", "   ")
 		if err != nil {
 			log.Fatalf("Error marshalling response: %v", err)

@@ -22,7 +22,7 @@ func main() {
 
 	op := grmln.NewOperator(c)
 
-	err := op.EvalDefault(context.Background(), `g.V()`, func(resp *grmln.Response) {
+	err := op.EvalDefault(context.Background(), `g.V()`, nil, func(resp *grmln.Response) {
 		data, err := json.MarshalIndent(resp.Result.Data, "", "   ")
 		if err != nil {
 			log.Fatalf("Error marshalling response: %v", err)
