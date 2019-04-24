@@ -4,10 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"io"
 	"net/http"
-	"os"
 	"sync"
 
 	"github.com/gorilla/websocket"
