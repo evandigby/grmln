@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"math/rand"
+	"net/http"
 	"time"
 )
 
@@ -61,6 +62,9 @@ type ClusterConfig struct {
 
 	// Password is the connection password
 	Password string
+
+	// Headers are the HTTP headers to pass through to the websocket connection
+	Headers http.Header
 }
 
 // NewCluster creates a new cluster
@@ -77,7 +81,7 @@ func NewCluster(config ClusterConfig, addrs ...string) *Cluster {
 
 	for _, addr := range addrs {
 		for i := 0; i < config.ConnectionsPerAddress; i++ {
-			go cluster.putConn(cluster.connect(addr, config.MimeType, config.UserName, config.Password), nil)
+			go cluster.putConn(cluster.connect(addr, config.MimeType, config.UserName, config.Password, config.Headers), nil)
 		}
 	}
 
@@ -129,7 +133,7 @@ func (c *Cluster) getConn(ctx context.Context) (*Conn, error) {
 func (c *Cluster) putConn(conn *Conn, err error) {
 	if err != nil {
 		go func() {
-			conn := c.connect(conn.addr, conn.mimeType, conn.userName, conn.password)
+			conn := c.connect(conn.addr, conn.mimeType, conn.userName, conn.password, conn.headers)
 			if conn != nil {
 				c.conns <- conn
 			}
@@ -150,11 +154,11 @@ func (c *Cluster) randomJitter(sleep time.Duration) time.Duration {
 	)
 }
 
-func (c *Cluster) connect(addr, mimeType, userName, password string) *Conn {
+func (c *Cluster) connect(addr, mimeType, userName, password string, headers http.Header) *Conn {
 	sleep := c.backoffBase
 	attempts := 1
 	for {
-		conn, err := Dial(context.Background(), addr, mimeType, userName, password)
+		conn, err := Dial(context.Background(), addr, mimeType, userName, password, headers)
 		if err == nil {
 			// connected!
 			return conn

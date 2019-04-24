@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -21,6 +24,7 @@ type Conn struct {
 	addr     string
 	userName string
 	password string
+	headers  http.Header
 	authArgs AuthenticationArgs
 	ws       *websocket.Conn
 
@@ -43,10 +47,10 @@ func SASL(userName, password string) AuthenticationArgs {
 }
 
 // Dial dials addresses
-func Dial(ctx context.Context, addr, mimeType, userName, password string) (*Conn, error) {
+func Dial(ctx context.Context, addr, mimeType, userName, password string, headers http.Header) (*Conn, error) {
 	dialer := websocket.Dialer{}
 
-	ws, _, err := dialer.DialContext(ctx, addr, http.Header{})
+	ws, _, err := dialer.DialContext(ctx, addr, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +60,7 @@ func Dial(ctx context.Context, addr, mimeType, userName, password string) (*Conn
 		addr:           addr,
 		userName:       userName,
 		password:       password,
+		headers:        headers,
 		authArgs:       SASL(userName, password),
 		ws:             ws,
 		sendBufferPool: newSendBufferPool(mimeType),

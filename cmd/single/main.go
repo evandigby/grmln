@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/evandigby/grmln"
 )
@@ -16,6 +17,7 @@ func main() {
 		grmln.DefaultMimeType,
 		"",
 		"",
+		http.Header{},
 	)
 	if err != nil {
 		log.Fatalf("Error connecting: %v", err)
